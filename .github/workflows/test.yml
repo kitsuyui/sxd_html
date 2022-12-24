@@ -1,0 +1,38 @@
+name: tests
+on: [push]
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    env:
+      # For incremental builds
+      CARGO_INCREMENTAL: 1
+    steps:
+      - uses: actions/checkout@v3
+        # For incremental builds
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # For incremental builds
+      - name: git-restore-mtime
+        uses: chetan/git-restore-mtime-action@v1.2
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - run: cargo fmt --all -- --check
+
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - run: cargo test
+
+      - run: cargo check
