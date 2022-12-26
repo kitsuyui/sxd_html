@@ -5,10 +5,10 @@ version = "0.1.0"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-html5ever = "0.25"
-sxd-document = "0.3"
+html5ever = "*"
+sxd-document = "*"
 
 [dev-dependencies]
-anyhow = "1.0"
-reqwest = { version="0.11", features=["blocking"] }
-sxd-xpath = "0.4"
+anyhow = "1.0.68"
+reqwest = { version="0.11.13", features=["blocking"] }
+sxd-xpath = "0.4.2"
