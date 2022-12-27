@@ -10,8 +10,8 @@ keywords = ["sxd_document", "sxd_xpath", "html5ever"]
 repository = "https://github.com/kitsuyui/sxd_html"
 
 [dependencies]
-html5ever = ">= 0.24.0"
-sxd-document = ">= 0.3.0"
+html5ever = "0.24.0"
+sxd-document = "0.3.0"
 
 [dev-dependencies]
 anyhow = "1.0.68"
