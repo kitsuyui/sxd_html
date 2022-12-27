@@ -1,4 +1,7 @@
 # sxd_html
+
+[![codecov](https://codecov.io/gh/kitsuyui/sxd_html/branch/main/graph/badge.svg?token=STRE17YWGQ)](https://codecov.io/gh/kitsuyui/sxd_html)
+
 Uses the `html5ever` to parse html and convert it to a `sxd_document::Package` to use with `sxd_xpath`.
 ## Example
 ```rust
