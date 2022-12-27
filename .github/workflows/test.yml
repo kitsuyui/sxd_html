@@ -33,6 +33,19 @@ jobs:
 
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - run: cargo test
-
       - run: cargo check
+
+      - name: coverage
+        run: |
+          cargo install cargo-llvm-cov || true  # when already cached
+          cargo llvm-cov --lcov --output-path coverage.lcov
+
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.lcov
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
