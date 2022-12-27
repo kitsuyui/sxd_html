@@ -3,6 +3,11 @@ edition = "2018"
 name = "sxd_html"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
+authors = ["diogo464 <diogo464@protonmail.com>", "kitsuyui <kitsuyui@kitsuyui.com>"]
+description = "Add HTML parsing support to sxd_document. This enables to evaluate XPath expressions on HTML documents."
+categories = ["web-programming", "parser-implementations"]
+keywords = ["sxd_document", "sxd_xpath", "html5ever"]
+repository = "https://github.com/kitsuyui/sxd_html"
 
 [dependencies]
 html5ever = "*"
