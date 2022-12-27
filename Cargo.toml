@@ -11,7 +11,7 @@ repository = "https://github.com/kitsuyui/sxd_html"
 
 [dependencies]
 html5ever = "0.26.0"
-sxd-document = "0.3.0"
+sxd-document = "0.3.2"
 
 [dev-dependencies]
 anyhow = "1.0.68"
