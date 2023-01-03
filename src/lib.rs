@@ -287,26 +287,33 @@ pub fn parse_html_fragment_with_errors(contents: &str) -> (Package, Vec<Error>) 
 mod tests {
     use super::*;
 
-    fn get_html_result(html: &str, xpath: &str) -> String {
+    #[derive(Debug, PartialEq, Eq)]
+    struct Error;
+
+    #[cfg(test)]
+    fn get_html_result(html: &str, xpath: &str) -> Result<String, Error> {
         let package = parse_html(html);
         let root = package.as_document().root();
-        let value = evaluate_xpath_node(root, xpath).unwrap();
-        value.string()
+        let value = evaluate_xpath_node(root, xpath).map_err(|_| Error)?;
+        Ok(value.string())
     }
 
-    fn get_html_fragment_result(html: &str, xpath: &str) -> String {
+    #[cfg(test)]
+    fn get_html_fragment_result(html: &str, xpath: &str) -> Result<String, Error> {
         let package = parse_html_fragment(html);
         let root = package.as_document().root();
-        let value = evaluate_xpath_node(root, xpath).unwrap();
-        value.string()
+        let value = evaluate_xpath_node(root, xpath).map_err(|_| Error)?;
+        Ok(value.string())
     }
 
-    fn get_xml_result(xml: &str, xpath: &str) -> String {
-        let xml = sxd_document::parser::parse(xml).unwrap();
-        let value = evaluate_xpath_node(xml.as_document().root(), xpath).unwrap();
-        value.string()
+    #[cfg(test)]
+    fn get_xml_result(xml: &str, xpath: &str) -> Result<String, Error> {
+        let xml = sxd_document::parser::parse(xml).map_err(|_| Error)?;
+        let value = evaluate_xpath_node(xml.as_document().root(), xpath).map_err(|_| Error)?;
+        Ok(value.string())
     }
 
+    #[cfg(test)]
     fn evaluate_xpath_node<'d>(
         node: impl Into<sxd_xpath::nodeset::Node<'d>>,
         expr: &str,
@@ -331,9 +338,9 @@ mod tests {
     <div id="test">Hello World</div>
   </body>
 </html>"#;
-        let result = get_html_result(html, "/html/body/div/text()");
+        let result = get_html_result(html, "/html/body/div/text()").unwrap();
         assert_eq!(result, "Hello World");
-        let result = get_html_result(html, "/html/head/title/text()");
+        let result = get_html_result(html, "/html/head/title/text()").unwrap();
         assert_eq!(result, "Test");
     }
 
@@ -342,41 +349,50 @@ mod tests {
         // This test is to ensure that the html parser is working as expected
         // sxd_document is well tested and is used to parse the xml
         // so if this test fails then it is likely that the html parser is not working
-        let result_xml = get_xml_result("<root><child>text</child></root>", "//root/child/text()");
+        let result_xml =
+            get_xml_result("<root><child>text</child></root>", "//root/child/text()").unwrap();
         let result_html =
-            get_html_result("<root><child>text</child></root>", "//root/child/text()");
+            get_html_result("<root><child>text</child></root>", "//root/child/text()").unwrap();
         assert_eq!(result_xml, "text");
         assert_eq!(result_html, "text");
 
-        let result_xml = get_xml_result("<root><child>text</child></root>", "//root/child");
-        let result_html = get_html_result("<root><child>text</child></root>", "//root/child");
-        assert_eq!(result_xml, "text");
-        assert_eq!(result_html, "text");
-
-        let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table//tr//td");
+        let result_xml =
+            get_xml_result("<root><child>text</child></root>", "//root/child").unwrap();
         let result_html =
-            get_html_result("<table><tr><td>text</td></tr></table>", "//table//tr//td");
+            get_html_result("<root><child>text</child></root>", "//root/child").unwrap();
         assert_eq!(result_xml, "text");
         assert_eq!(result_html, "text");
 
-        let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
-        let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
+        let result_xml =
+            get_xml_result("<table><tr><td>text</td></tr></table>", "//table//tr//td").unwrap();
+        let result_html =
+            get_html_result("<table><tr><td>text</td></tr></table>", "//table//tr//td").unwrap();
+        assert_eq!(result_xml, "text");
+        assert_eq!(result_html, "text");
+
+        let result_xml =
+            get_xml_result("<table><tr><td>text</td></tr></table>", "//table/tr/td").unwrap();
+        let result_html =
+            get_html_result("<table><tr><td>text</td></tr></table>", "//table/tr/td").unwrap();
         let result_html2 = get_html_result(
             "<table><tr><td>text</td></tr></table>",
             "//table/tbody/tr/td",
-        );
+        )
+        .unwrap();
         assert_eq!(result_xml, "text");
         assert_eq!(result_html, "");
         assert_eq!(result_html2, "text"); // tbody is added by html5ever
 
-        let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table");
-        let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table");
+        let result_xml =
+            get_xml_result("<table><tr><td>text</td></tr></table>", "//table").unwrap();
+        let result_html =
+            get_html_result("<table><tr><td>text</td></tr></table>", "//table").unwrap();
         assert_eq!(result_xml, "text");
         assert_eq!(result_html, "text");
 
-        let x1 = get_xml_result("<tr><td>text</td></tr>", "//tr");
-        let x2 = get_html_result("<tr><td>text</td></tr>", "//tr"); // html5ever vanishes the tr because it is not in a table
-        let x3 = get_html_fragment_result("<tr><td>text</td></tr>", "//tr"); // fragment mode does not vanish the tr
+        let x1 = get_xml_result("<tr><td>text</td></tr>", "//tr").unwrap();
+        let x2 = get_html_result("<tr><td>text</td></tr>", "//tr").unwrap(); // html5ever vanishes the tr because it is not in a table
+        let x3 = get_html_fragment_result("<tr><td>text</td></tr>", "//tr").unwrap(); // fragment mode does not vanish the tr
         assert_eq!(x1, "text");
         assert_eq!(x2, "");
         assert_eq!(x3, "text");
