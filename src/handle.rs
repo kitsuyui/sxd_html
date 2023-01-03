@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use html5ever::QualName;
 use sxd_document::dom::{
     ChildOfElement, ChildOfRoot, Comment, Element, ParentOfChild, ProcessingInstruction, Root, Text,
@@ -54,21 +56,23 @@ impl<'d> Handle<'d> {
     }
 }
 
-impl<'d> From<Handle<'d>> for ChildOfRoot<'d> {
-    fn from(h: Handle<'d>) -> Self {
+impl<'d> TryFrom<Handle<'d>> for ChildOfRoot<'d> {
+    type Error = ();
+    fn try_from(h: Handle<'d>) -> Result<Self, Self::Error> {
         match h {
             Handle::Document(_) => panic!("Handle::Document cannot be made into ChildOfRoot"),
-            Handle::Element(x, _, _) => x.into(),
-            Handle::Comment(x) => x.into(),
-            Handle::ProcessingInstruction(x) => x.into(),
-            Handle::Text(_) => panic!("Handle::Text cannot be mande into ChildOfRoot"),
+            Handle::Element(x, _, _) => Ok(x.into()),
+            Handle::Comment(x) => Ok(x.into()),
+            Handle::ProcessingInstruction(x) => Ok(x.into()),
+            Handle::Text(_) => panic!("Handle::Text cannot be made into ChildOfRoot"),
         }
     }
 }
 
-impl<'d> From<Handle<'d>> for ChildOfElement<'d> {
-    fn from(h: Handle<'d>) -> Self {
-        ChildOfRoot::from(h).into()
+impl<'d> TryFrom<Handle<'d>> for ChildOfElement<'d> {
+    type Error = ();
+    fn try_from(h: Handle<'d>) -> Result<Self, Self::Error> {
+        Ok(ChildOfRoot::try_from(h)?.into())
     }
 }
 

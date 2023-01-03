@@ -82,6 +82,44 @@ Trending Repos :
 	csseky /cskaoyan
 ```
 
+## Note
+
+This library uses `html5ever` to parse html. So you need to follow the constraints of `html5ever`.
+For example, you need to be careful about how to handle `<table>` tags.
+
+```html
+<table>
+    <tr>
+        <td>1</td>
+        <td>2</td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>4</td>
+    </tr>
+</table>
+```
+
+will be interpreted as
+
+```html
+<table>
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>2</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>4</td>
+        </tr>
+    </tbody>
+</table>
+```
+
+So if you run the query `//table/tr/td`, you will not get the `td` hidden by `tbody`.
+You need to run the query `//table/tbody/tr/td`.
+
 ## License
 
 Licensed under either of

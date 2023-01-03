@@ -1,0 +1,13 @@
+[target.'cfg(all())']
+rustflags = [
+    "-Wclippy::fallible_impl_from",
+    "-Dclippy::unwrap_used",
+    "-Dclippy::expect_used",
+]
+[alias]
+format = "fmt --all"
+format-check = "fmt --all -- --check"
+lint = "clippy --all-targets --all-features -- -D warnings"
+lint-fix = "clippy --all-targets --all-features --fix --allow-dirty --allow-staged"
+coverage = "llvm-cov --no-clean --lcov --output-path coverage.lcov"
+run_example = "run --package sxd_html --example github_trending"
