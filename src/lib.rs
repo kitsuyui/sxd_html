@@ -307,7 +307,10 @@ mod tests {
         value.string()
     }
 
-    fn evaluate_xpath_node<'d>(node: impl Into<sxd_xpath::nodeset::Node<'d>>, expr: &str) -> Result<sxd_xpath::Value<'d>, sxd_xpath::Error> {
+    fn evaluate_xpath_node<'d>(
+        node: impl Into<sxd_xpath::nodeset::Node<'d>>,
+        expr: &str,
+    ) -> Result<sxd_xpath::Value<'d>, sxd_xpath::Error> {
         let factory = sxd_xpath::Factory::new();
         let expression = factory.build(expr)?;
         let expression = expression.ok_or(sxd_xpath::Error::NoXPath)?;
@@ -377,5 +380,181 @@ mod tests {
         assert_eq!(x1, "text");
         assert_eq!(x2, "");
         assert_eq!(x3, "text");
+    }
+
+    #[test]
+    fn test_comparison_with_xml_nested_xpath() {
+        let base_html = "<root><child>text</child></root>";
+        let node = sxd_document::parser::parse(base_html).unwrap();
+        let result_xml = evaluate_xpath_node(node.as_document().root(), "//root");
+        let mut results = vec![];
+        match result_xml {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 1);
+                for elm in set.document_order() {
+                    let result = evaluate_xpath_node(elm, "//child/text()").unwrap();
+                    results.push(result.string());
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text"]);
+
+        let node = parse_html(base_html);
+        let result_html = evaluate_xpath_node(node.as_document().root(), "//root");
+        let mut results = vec![];
+        match result_html {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 1);
+                for elm in set.document_order() {
+                    let result = evaluate_xpath_node(elm, "//child/text()").unwrap();
+                    results.push(result.string());
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text"]);
+
+        let base_html2 = "<root><child>text1</child><child>text2</child></root>";
+        let node = sxd_document::parser::parse(base_html2).unwrap();
+        let result_xml = evaluate_xpath_node(node.as_document().root(), "//root/*");
+        let mut results = vec![];
+        match result_xml {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 2);
+                for elm in set.document_order().iter() {
+                    let result = evaluate_xpath_node(*elm, "./text()").unwrap();
+                    results.push(result.string());
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text1", "text2"]);
+
+        let node = parse_html(base_html2);
+        let result_html = evaluate_xpath_node(node.as_document().root(), "//root/*");
+        let mut results = vec![];
+        match result_html {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 2);
+                for elm in set.document_order().iter() {
+                    let result = evaluate_xpath_node(*elm, "./text()").unwrap();
+                    results.push(result.string());
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text1", "text2"]);
+
+        let base_html3 = r#"<root>
+            <mytable>
+                <mytr>
+                    <mytd>text1</mytd>
+                    <mytd>text2</mytd>
+                </mytr>
+                <mytr>
+                    <mytd>text3</mytd>
+                    <mytd>text4</mytd>
+                </mytr>
+            </mytable>
+        </root>"#;
+        let node = sxd_document::parser::parse(base_html3).unwrap();
+        let result_xml = evaluate_xpath_node(node.as_document().root(), "//root/mytable/mytr");
+        let mut results = vec![];
+        match result_xml {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 2);
+                for elm in set.document_order().iter() {
+                    match evaluate_xpath_node(*elm, "./mytd/text()").unwrap() {
+                        sxd_xpath::Value::Nodeset(set2) => {
+                            for elm in set2.document_order().iter() {
+                                results.push(elm.string_value());
+                            }
+                        }
+                        _ => panic!("Error"),
+                    }
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text1", "text2", "text3", "text4"]);
+
+        let node = parse_html(base_html3);
+        let result_html = evaluate_xpath_node(node.as_document().root(), "//root/mytable/mytr");
+        let mut results = vec![];
+        match result_html {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 2);
+                for elm in set.document_order().iter() {
+                    match evaluate_xpath_node(*elm, "./mytd/text()").unwrap() {
+                        sxd_xpath::Value::Nodeset(set2) => {
+                            for elm in set2.document_order().iter() {
+                                results.push(elm.string_value());
+                            }
+                        }
+                        _ => panic!("Error"),
+                    }
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text1", "text2", "text3", "text4"]);
+    }
+
+    #[test]
+    fn test_comparison_with_xml_nested_xpath_table() {
+        let base_html3 = r#"<root>
+            <table>
+                <tr>
+                    <td>text1</td>
+                    <td>text2</td>
+                </tr>
+                <tr>
+                    <td>text3</td>
+                    <td>text4</td>
+                </tr>
+            </table>
+        </root>"#;
+        let node = sxd_document::parser::parse(base_html3).unwrap();
+        let result_xml = evaluate_xpath_node(node.as_document().root(), "//root/table/tr");
+        let mut results = vec![];
+        match result_xml {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 2);
+                for elm in set.document_order().iter() {
+                    match evaluate_xpath_node(*elm, "./td/text()").unwrap() {
+                        sxd_xpath::Value::Nodeset(set2) => {
+                            for elm in set2.document_order().iter() {
+                                results.push(elm.string_value());
+                            }
+                        }
+                        _ => panic!("Error"),
+                    }
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text1", "text2", "text3", "text4"]);
+
+        let node = parse_html(base_html3);
+        let result_html = evaluate_xpath_node(node.as_document().root(), "//root/table//tr");
+        let mut results = vec![];
+        match result_html {
+            Ok(sxd_xpath::Value::Nodeset(set)) => {
+                assert_eq!(set.size(), 2);
+                for elm in set.document_order().iter() {
+                    match evaluate_xpath_node(*elm, "./td/text()").unwrap() {
+                        sxd_xpath::Value::Nodeset(set2) => {
+                            for elm in set2.document_order().iter() {
+                                results.push(elm.string_value());
+                            }
+                        }
+                        _ => panic!("Error"),
+                    }
+                }
+            }
+            _ => panic!("Error"),
+        }
+        assert_eq!(results, vec!["text1", "text2", "text3", "text4"]);
     }
 }
