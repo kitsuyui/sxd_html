@@ -1,6 +1,8 @@
 mod error;
 mod handle;
 mod util;
+use std::convert::TryFrom;
+
 use html5ever::driver::ParseOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::tree_builder::TreeBuilderOpts;
@@ -186,7 +188,8 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         let parent = sibling.parent().expect("must have a parent");
 
         let children = {
-            let mut v = vec![ChildOfElement::from(sibling.clone())];
+            #[allow(clippy::expect_used)]
+            let mut v = vec![ChildOfElement::try_from(sibling.clone()).expect("must be element")];
             v.extend(sibling.following_siblings().into_iter());
             v
         };

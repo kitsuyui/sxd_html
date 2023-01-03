@@ -14,6 +14,7 @@ fn main() -> anyhow::Result<()> {
 
     for repo_a in repo_as {
         let user = evaluate_xpath_node(repo_a, "./span/text()")?.into_string();
+        #[allow(clippy::unwrap_used)]
         let name = repo_a
             .children()
             .last()

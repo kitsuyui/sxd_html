@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use html5ever::{tree_builder::NodeOrText, QualName};
 use sxd_document::{
     dom::{ChildOfElement, ChildOfRoot, Document, ParentOfChild},
@@ -26,7 +28,11 @@ pub fn qualname_as_qname(qualname: &QualName) -> QName {
 
 pub fn node_or_text_into_child_of_root(node_or_text: NodeOrText<Handle>) -> ChildOfRoot {
     match node_or_text {
-        NodeOrText::AppendNode(handle) => ChildOfRoot::from(handle),
+        NodeOrText::AppendNode(handle) =>
+        {
+            #[allow(clippy::expect_used)]
+            ChildOfRoot::try_from(handle).expect("Cannot convert to ChildOfRoot")
+        }
         NodeOrText::AppendText(_) => panic!("Text cannot be made into ChildOfRoot"),
     }
 }
@@ -36,7 +42,11 @@ pub fn node_or_text_into_child_of_element<'d>(
     node_or_text: NodeOrText<Handle<'d>>,
 ) -> ChildOfElement<'d> {
     match node_or_text {
-        NodeOrText::AppendNode(handle) => ChildOfElement::from(handle),
+        NodeOrText::AppendNode(handle) =>
+        {
+            #[allow(clippy::expect_used)]
+            ChildOfElement::try_from(handle).expect("Cannot convert to ChildOfElement")
+        }
         NodeOrText::AppendText(text) => ChildOfElement::from(document.create_text(text.as_ref())),
     }
 }
