@@ -182,6 +182,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         sibling: &Self::Handle,
         new_node: NodeOrText<Self::Handle>,
     ) {
+        #[allow(clippy::expect_used)]
         let parent = sibling.parent().expect("must have a parent");
 
         let children = {
