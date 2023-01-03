@@ -315,9 +315,16 @@ mod tests {
         assert_eq!(result_xml, "text");
         assert_eq!(result_html, "text");
 
+        let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table//tr//td");
+        let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table//tr//td");
+        assert_eq!(result_xml, "text");
+        assert_eq!(result_html, "text");
+
         let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
         let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
+        let result_html2 = get_html_result("<table><tr><td>text</td></tr></table>", "//table/tbody/tr/td");
         assert_eq!(result_xml, "text");
-        assert_eq!(result_html, ""); // This is the problem
+        assert_eq!(result_html, "");
+        assert_eq!(result_html2, "text"); // tbody is added by html5ever
     }
 }
