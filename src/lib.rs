@@ -254,3 +254,51 @@ pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
 
     (package, errors)
 }
+
+#[cfg(test)]
+mod tests {
+    use sxd_xpath::nodeset::Node;
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct Error;
+
+    fn get_xpath_node<'d>(expr: &str) -> Result<sxd_xpath::XPath, Error> {
+        let factory = sxd_xpath::Factory::new();
+        match factory.build(expr) {
+            Ok(Some(expr)) => Ok(expr),
+            Ok(None) => Err(Error),
+            Err(_) => Err(Error),
+        }
+    }
+
+    #[test]
+    fn test_parse_html() {
+        let html = r#"<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test</title>
+  </head>
+  <body>
+    <div id="test">Hello World</div>
+  </body>
+</html>"#;
+
+        let package = parse_html(html);
+        let root = package.as_document().root();
+        let expr = get_xpath_node("/html/body/div/text()").unwrap();
+        let context = sxd_xpath::Context::new();
+        let node = expr
+            .evaluate::<Node>(&context, root.into())
+            .unwrap();
+        assert_eq!(node.string(), "Hello World");
+
+        let expr = get_xpath_node("/html/head/title/text()").unwrap();
+        let context = sxd_xpath::Context::new();
+        let node = expr
+            .evaluate::<Node>(&context, root.into())
+            .unwrap();
+        assert_eq!(node.string(), "Test");
+    }
+}
