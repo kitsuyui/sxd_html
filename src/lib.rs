@@ -285,39 +285,36 @@ pub fn parse_html_fragment_with_errors(contents: &str) -> (Package, Vec<Error>) 
 
 #[cfg(test)]
 mod tests {
-    use sxd_xpath::nodeset::Node;
-
     use super::*;
 
     fn get_html_result(html: &str, xpath: &str) -> String {
         let package = parse_html(html);
         let root = package.as_document().root();
-        let factory = sxd_xpath::Factory::new();
-        let expr = factory.build(xpath).unwrap().unwrap();
-        let context = sxd_xpath::Context::new();
-        let value = expr.evaluate::<Node>(&context, root.into()).unwrap();
+        let value = evaluate_xpath_node(root, xpath).unwrap();
         value.string()
     }
 
     fn get_html_fragment_result(html: &str, xpath: &str) -> String {
         let package = parse_html_fragment(html);
         let root = package.as_document().root();
-        let factory = sxd_xpath::Factory::new();
-        let expr = factory.build(xpath).unwrap().unwrap();
-        let context = sxd_xpath::Context::new();
-        let value = expr.evaluate::<Node>(&context, root.into()).unwrap();
+        let value = evaluate_xpath_node(root, xpath).unwrap();
         value.string()
     }
 
     fn get_xml_result(xml: &str, xpath: &str) -> String {
         let xml = sxd_document::parser::parse(xml).unwrap();
-        let context = sxd_xpath::Context::new();
+        let value = evaluate_xpath_node(xml.as_document().root(), xpath).unwrap();
+        value.string()
+    }
+
+    fn evaluate_xpath_node<'d>(node: impl Into<sxd_xpath::nodeset::Node<'d>>, expr: &str) -> Result<sxd_xpath::Value<'d>, sxd_xpath::Error> {
         let factory = sxd_xpath::Factory::new();
-        let expr = factory.build(xpath).unwrap().unwrap();
-        let node = expr
-            .evaluate::<Node>(&context, xml.as_document().root().into())
-            .unwrap();
-        node.string()
+        let expression = factory.build(expr)?;
+        let expression = expression.ok_or(sxd_xpath::Error::NoXPath)?;
+        let context = sxd_xpath::Context::new();
+        expression
+            .evaluate(&context, node.into())
+            .map_err(Into::into)
     }
 
     #[test]
