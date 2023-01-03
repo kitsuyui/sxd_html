@@ -61,7 +61,7 @@ impl<'d> From<Handle<'d>> for ChildOfRoot<'d> {
             Handle::Element(x, _, _) => x.into(),
             Handle::Comment(x) => x.into(),
             Handle::ProcessingInstruction(x) => x.into(),
-            Handle::Text(_) => panic!("Handle::Text cannot be mande into ChildOfRoot"),
+            Handle::Text(_) => panic!("Handle::Text cannot be made into ChildOfRoot"),
         }
     }
 }
