@@ -1,6 +1,9 @@
 mod error;
 mod handle;
 mod util;
+use html5ever::driver::ParseOpts;
+use html5ever::tendril::TendrilSink;
+use html5ever::tree_builder::TreeBuilderOpts;
 
 pub use error::Error;
 pub(crate) use handle::Handle;
@@ -8,6 +11,7 @@ pub(crate) use handle::Handle;
 use html5ever::{
     tendril::Tendril,
     tree_builder::{NodeOrText, TreeSink},
+    LocalName, Namespace, QualName,
 };
 use sxd_document::{
     dom::{ChildOfElement, Document},
@@ -232,11 +236,11 @@ pub fn parse_html(contents: &str) -> Package {
     parse_html_with_errors(contents).0
 }
 
-pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
-    use html5ever::driver::ParseOpts;
-    use html5ever::tendril::TendrilSink;
-    use html5ever::tree_builder::TreeBuilderOpts;
+pub fn parse_html_fragment(contents: &str) -> Package {
+    parse_html_fragment_with_errors(contents).0
+}
 
+pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     let package = Package::new();
     let document = package.as_document();
     let sink = DocHtmlSink::new(document);
@@ -255,6 +259,30 @@ pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     (package, errors)
 }
 
+pub fn parse_html_fragment_with_errors(contents: &str) -> (Package, Vec<Error>) {
+    let package = Package::new();
+    let document = package.as_document();
+    let sink = DocHtmlSink::new(document);
+
+    let opts = ParseOpts {
+        tree_builder: TreeBuilderOpts {
+            drop_doctype: true,
+            exact_errors: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let parser = html5ever::parse_fragment(
+        sink,
+        opts,
+        QualName::new(None, Namespace::default(), LocalName::from("")),
+        Default::default(),
+    );
+    let errors = parser.one(contents);
+
+    (package, errors)
+}
+
 #[cfg(test)]
 mod tests {
     use sxd_xpath::nodeset::Node;
@@ -267,8 +295,18 @@ mod tests {
         let factory = sxd_xpath::Factory::new();
         let expr = factory.build(xpath).unwrap().unwrap();
         let context = sxd_xpath::Context::new();
-        let node = expr.evaluate::<Node>(&context, root.into()).unwrap();
-        node.string()
+        let value = expr.evaluate::<Node>(&context, root.into()).unwrap();
+        value.string()
+    }
+
+    fn get_html_fragment_result(html: &str, xpath: &str) -> String {
+        let package = parse_html_fragment(html);
+        let root = package.as_document().root();
+        let factory = sxd_xpath::Factory::new();
+        let expr = factory.build(xpath).unwrap().unwrap();
+        let context = sxd_xpath::Context::new();
+        let value = expr.evaluate::<Node>(&context, root.into()).unwrap();
+        value.string()
     }
 
     fn get_xml_result(xml: &str, xpath: &str) -> String {
@@ -316,15 +354,31 @@ mod tests {
         assert_eq!(result_html, "text");
 
         let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table//tr//td");
-        let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table//tr//td");
+        let result_html =
+            get_html_result("<table><tr><td>text</td></tr></table>", "//table//tr//td");
         assert_eq!(result_xml, "text");
         assert_eq!(result_html, "text");
 
         let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
         let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
-        let result_html2 = get_html_result("<table><tr><td>text</td></tr></table>", "//table/tbody/tr/td");
+        let result_html2 = get_html_result(
+            "<table><tr><td>text</td></tr></table>",
+            "//table/tbody/tr/td",
+        );
         assert_eq!(result_xml, "text");
         assert_eq!(result_html, "");
         assert_eq!(result_html2, "text"); // tbody is added by html5ever
+
+        let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table");
+        let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table");
+        assert_eq!(result_xml, "text");
+        assert_eq!(result_html, "text");
+
+        let x1 = get_xml_result("<tr><td>text</td></tr>", "//tr");
+        let x2 = get_html_result("<tr><td>text</td></tr>", "//tr"); // html5ever vanishes the tr because it is not in a table
+        let x3 = get_html_fragment_result("<tr><td>text</td></tr>", "//tr"); // fragment mode does not vanish the tr
+        assert_eq!(x1, "text");
+        assert_eq!(x2, "");
+        assert_eq!(x3, "text");
     }
 }
