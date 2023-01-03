@@ -261,16 +261,25 @@ mod tests {
 
     use super::*;
 
-    #[derive(Debug)]
-    struct Error;
-
-    fn get_xpath_node<'d>(expr: &str) -> Result<sxd_xpath::XPath, Error> {
+    fn get_html_result(html: &str, xpath: &str) -> String {
+        let package = parse_html(html);
+        let root = package.as_document().root();
         let factory = sxd_xpath::Factory::new();
-        match factory.build(expr) {
-            Ok(Some(expr)) => Ok(expr),
-            Ok(None) => Err(Error),
-            Err(_) => Err(Error),
-        }
+        let expr = factory.build(xpath).unwrap().unwrap();
+        let context = sxd_xpath::Context::new();
+        let node = expr.evaluate::<Node>(&context, root.into()).unwrap();
+        node.string()
+    }
+
+    fn get_xml_result(xml: &str, xpath: &str) -> String {
+        let xml = sxd_document::parser::parse(xml).unwrap();
+        let context = sxd_xpath::Context::new();
+        let factory = sxd_xpath::Factory::new();
+        let expr = factory.build(xpath).unwrap().unwrap();
+        let node = expr
+            .evaluate::<Node>(&context, xml.as_document().root().into())
+            .unwrap();
+        node.string()
     }
 
     #[test]
@@ -284,21 +293,31 @@ mod tests {
     <div id="test">Hello World</div>
   </body>
 </html>"#;
+        let result = get_html_result(html, "/html/body/div/text()");
+        assert_eq!(result, "Hello World");
+        let result = get_html_result(html, "/html/head/title/text()");
+        assert_eq!(result, "Test");
+    }
 
-        let package = parse_html(html);
-        let root = package.as_document().root();
-        let expr = get_xpath_node("/html/body/div/text()").unwrap();
-        let context = sxd_xpath::Context::new();
-        let node = expr
-            .evaluate::<Node>(&context, root.into())
-            .unwrap();
-        assert_eq!(node.string(), "Hello World");
+    #[test]
+    fn test_comparison_with_xml() {
+        // This test is to ensure that the html parser is working as expected
+        // sxd_document is well tested and is used to parse the xml
+        // so if this test fails then it is likely that the html parser is not working
+        let result_xml = get_xml_result("<root><child>text</child></root>", "//root/child/text()");
+        let result_html =
+            get_html_result("<root><child>text</child></root>", "//root/child/text()");
+        assert_eq!(result_xml, "text");
+        assert_eq!(result_html, "text");
 
-        let expr = get_xpath_node("/html/head/title/text()").unwrap();
-        let context = sxd_xpath::Context::new();
-        let node = expr
-            .evaluate::<Node>(&context, root.into())
-            .unwrap();
-        assert_eq!(node.string(), "Test");
+        let result_xml = get_xml_result("<root><child>text</child></root>", "//root/child");
+        let result_html = get_html_result("<root><child>text</child></root>", "//root/child");
+        assert_eq!(result_xml, "text");
+        assert_eq!(result_html, "text");
+
+        let result_xml = get_xml_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
+        let result_html = get_html_result("<table><tr><td>text</td></tr></table>", "//table/tr/td");
+        assert_eq!(result_xml, "text");
+        assert_eq!(result_html, ""); // This is the problem
     }
 }
