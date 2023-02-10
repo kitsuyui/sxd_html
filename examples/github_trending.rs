@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
 
     println!("Trending Repos :");
     for name in trending_repos {
-        println!("\t{}", name);
+        println!("\t{name}");
     }
 
     Ok(())
