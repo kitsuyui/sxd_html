@@ -132,7 +132,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
                     }
                 }
             }
-            _ => panic!("Can only appent into document or element"),
+            _ => panic!("Can only append into document or element"),
         }
     }
 
