@@ -190,7 +190,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         let children = {
             #[allow(clippy::expect_used)]
             let mut v = vec![ChildOfElement::try_from(sibling.clone()).expect("must be element")];
-            v.extend(sibling.following_siblings().into_iter());
+            v.extend(sibling.following_siblings());
             v
         };
 
