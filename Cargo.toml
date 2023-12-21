@@ -14,6 +14,6 @@ html5ever = "0.26.0"
 sxd-document = "0.3.2"
 
 [dev-dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.76"
 reqwest = { version="0.11.23", features=["blocking"] }
 sxd-xpath = "0.4.2"
