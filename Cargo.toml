@@ -15,5 +15,5 @@ sxd-document = "0.3.2"
 
 [dev-dependencies]
 anyhow = "1.0.81"
-reqwest = { version="0.12.1", features=["blocking"] }
+reqwest = { version="0.12.2", features=["blocking"] }
 sxd-xpath = "0.4.2"
