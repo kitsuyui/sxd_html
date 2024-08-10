@@ -1,7 +1,11 @@
 mod error;
 mod handle;
 mod util;
-use std::convert::TryFrom;
+
+use std::{
+    cell::{Cell, RefCell},
+    convert::TryFrom,
+};
 
 use html5ever::driver::ParseOpts;
 use html5ever::tendril::TendrilSink;
@@ -24,8 +28,8 @@ use sxd_document::{
 struct DocHtmlSink<'d> {
     document: Document<'d>,
     document_handle: Handle<'d>,
-    errors: Vec<Error>,
-    current_line: u64,
+    errors: RefCell<Vec<Error>>,
+    current_line: Cell<u64>,
 }
 
 impl<'d> DocHtmlSink<'d> {
@@ -36,7 +40,7 @@ impl<'d> DocHtmlSink<'d> {
             document,
             document_handle,
             errors: Default::default(),
-            current_line: 0,
+            current_line: Cell::new(0),
         }
     }
 }
@@ -45,19 +49,20 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     type Handle = Handle<'d>;
     type Output = Vec<Error>;
 
-    fn set_current_line(&mut self, line_number: u64) {
-        self.current_line = line_number;
+    fn set_current_line(&self, line_number: u64) {
+        self.current_line.set(line_number);
     }
 
     fn finish(self) -> Self::Output {
-        self.errors
+        self.errors.into_inner()
     }
 
-    fn parse_error(&mut self, msg: std::borrow::Cow<'static, str>) {
-        self.errors.push(Error::new(self.current_line, msg));
+    fn parse_error(&self, msg: std::borrow::Cow<'static, str>) {
+        let err = Error::new(self.current_line.get(), msg);
+        self.errors.borrow_mut().push(err);
     }
 
-    fn get_document(&mut self) -> Self::Handle {
+    fn get_document(&self) -> Self::Handle {
         self.document_handle.clone()
     }
 
@@ -70,7 +75,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     fn create_element(
-        &mut self,
+        &self,
         name: html5ever::QualName,
         attrs: Vec<html5ever::Attribute>,
         flags: html5ever::tree_builder::ElementFlags,
@@ -86,13 +91,13 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         Handle::Element(elem, name, flags.template)
     }
 
-    fn create_comment(&mut self, text: html5ever::tendril::StrTendril) -> Self::Handle {
+    fn create_comment(&self, text: html5ever::tendril::StrTendril) -> Self::Handle {
         let comment = self.document.create_comment(text.as_ref());
         Handle::Comment(comment)
     }
 
     fn create_pi(
-        &mut self,
+        &self,
         target: html5ever::tendril::StrTendril,
         data: html5ever::tendril::StrTendril,
     ) -> Self::Handle {
@@ -109,7 +114,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         Handle::ProcessingInstruction(pi)
     }
 
-    fn append(&mut self, parent: &Self::Handle, child: NodeOrText<Self::Handle>) {
+    fn append(&self, parent: &Self::Handle, child: NodeOrText<Self::Handle>) {
         match parent {
             Handle::Document(root) => {
                 // text cant be appended to root so no need to concatenate it
@@ -137,7 +142,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     fn append_based_on_parent_node(
-        &mut self,
+        &self,
         element: &Self::Handle,
         prev_element: &Self::Handle,
         child: NodeOrText<Self::Handle>,
@@ -155,7 +160,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     fn append_doctype_to_document(
-        &mut self,
+        &self,
         _name: html5ever::tendril::StrTendril,
         _public_id: html5ever::tendril::StrTendril,
         _system_id: html5ever::tendril::StrTendril,
@@ -163,7 +168,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         // ignored, cant seem to find a way to add doctype using sxd_document
     }
 
-    fn get_template_contents(&mut self, target: &Self::Handle) -> Self::Handle {
+    fn get_template_contents(&self, target: &Self::Handle) -> Self::Handle {
         // this template stuff is probably not well done but seems to work
         match target {
             Handle::Element(_, _, true) => target.clone(),
@@ -175,15 +180,11 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         x == y
     }
 
-    fn set_quirks_mode(&mut self, _mode: html5ever::tree_builder::QuirksMode) {
+    fn set_quirks_mode(&self, _mode: html5ever::tree_builder::QuirksMode) {
         // ignored
     }
 
-    fn append_before_sibling(
-        &mut self,
-        sibling: &Self::Handle,
-        new_node: NodeOrText<Self::Handle>,
-    ) {
+    fn append_before_sibling(&self, sibling: &Self::Handle, new_node: NodeOrText<Self::Handle>) {
         #[allow(clippy::expect_used)]
         let parent = sibling.parent().expect("must have a parent");
 
@@ -210,7 +211,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     // this is only called on elements
-    fn add_attrs_if_missing(&mut self, target: &Self::Handle, attrs: Vec<html5ever::Attribute>) {
+    fn add_attrs_if_missing(&self, target: &Self::Handle, attrs: Vec<html5ever::Attribute>) {
         let elem = target.element_ref();
         for attr in attrs {
             let qname = util::qualname_as_qname(&attr.name);
@@ -222,11 +223,11 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         }
     }
 
-    fn remove_from_parent(&mut self, target: &Self::Handle) {
+    fn remove_from_parent(&self, target: &Self::Handle) {
         target.remove_from_parent();
     }
 
-    fn reparent_children(&mut self, node: &Self::Handle, new_parent: &Self::Handle) {
+    fn reparent_children(&self, node: &Self::Handle, new_parent: &Self::Handle) {
         let node = node.element_ref();
         let new_parent = new_parent.element_ref();
 
