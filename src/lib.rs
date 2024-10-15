@@ -7,9 +7,9 @@ use std::{
     convert::TryFrom,
 };
 
-use html5ever::driver::ParseOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::tree_builder::TreeBuilderOpts;
+use html5ever::{driver::ParseOpts, ExpandedName};
 
 pub use error::Error;
 pub(crate) use handle::Handle;
@@ -46,6 +46,7 @@ impl<'d> DocHtmlSink<'d> {
 }
 
 impl<'d> TreeSink for DocHtmlSink<'d> {
+    type ElemName<'a> = ExpandedName<'a> where Self: 'a;
     type Handle = Handle<'d>;
     type Output = Vec<Error>;
 
@@ -67,7 +68,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     // this is only called on elements
-    fn elem_name<'h>(&'h self, target: &'h Self::Handle) -> html5ever::ExpandedName<'h> {
+    fn elem_name<'h>(&'h self, target: &'h Self::Handle) -> Self::ElemName<'h> {
         match target {
             Handle::Element(_, qualname, _) => qualname.expanded(),
             _ => panic!("not an element"),
