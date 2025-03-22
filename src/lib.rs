@@ -46,7 +46,10 @@ impl<'d> DocHtmlSink<'d> {
 }
 
 impl<'d> TreeSink for DocHtmlSink<'d> {
-    type ElemName<'a> = ExpandedName<'a> where Self: 'a;
+    type ElemName<'a>
+        = ExpandedName<'a>
+    where
+        Self: 'a;
     type Handle = Handle<'d>;
     type Output = Vec<Error>;
 
