@@ -286,6 +286,7 @@ pub fn parse_html_fragment_with_errors(contents: &str) -> (Package, Vec<Error>) 
         opts,
         QualName::new(None, Namespace::default(), LocalName::from("")),
         Default::default(),
+        false,
     );
     let errors = parser.one(contents);
 
