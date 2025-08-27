@@ -15,7 +15,7 @@ jobs:
       # For incremental builds
       CARGO_INCREMENTAL: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         # For incremental builds
         with:
           fetch-depth: 0
