@@ -16,13 +16,12 @@ pub fn qualname_from_qname(qname: QName) -> QualName {
     )
 }
 
-pub fn qualname_as_qname(qualname: &QualName) -> QName {
+pub fn qualname_as_qname<'a>(qualname: &'a QualName) -> QName<'a> {
     // let ns = if qualname.ns.is_empty() {
     //     None
     // } else {
     //     Some(qualname.ns.as_ref())
     // };
-    //QName::with_namespace_uri(ns, qualname.local.as_ref())
     QName::with_namespace_uri(None, qualname.local.as_ref())
 }
 
