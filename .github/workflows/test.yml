@@ -21,6 +21,8 @@ jobs:
           fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       # For incremental builds
       - name: git-restore-mtime
