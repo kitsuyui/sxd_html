@@ -10,7 +10,7 @@ keywords = ["sxd_document", "sxd_xpath", "html5ever"]
 repository = "https://github.com/kitsuyui/sxd_html"
 
 [dependencies]
-html5ever = "0.36.0"
+html5ever = "0.38.0"
 sxd-document = "0.3.2"
 
 [dev-dependencies]
