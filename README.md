@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/d/sxd_html)](https://crates.io/crates/sxd_html)
 [![tests](https://github.com/kitsuyui/sxd_html/actions/workflows/test.yml/badge.svg)](https://github.com/kitsuyui/sxd_html/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/kitsuyui/sxd_html/branch/main/graph/badge.svg?token=STRE17YWGQ)](https://codecov.io/gh/kitsuyui/sxd_html)
+![Coverage](https://raw.githubusercontent.com/kitsuyui/octocov-central/main/badges/kitsuyui/sxd_html/coverage.svg)
 [![license](https://img.shields.io/crates/l/sxd_html)](https://github.com/kitsuyui/sxd_html#license)
 
 Uses the `html5ever` to parse html and convert it to a `sxd_document::Package` to use with `sxd_xpath`.
