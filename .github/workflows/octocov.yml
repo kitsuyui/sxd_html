@@ -1,0 +1,53 @@
+name: octocov
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  octocov:
+    runs-on: ubuntu-latest
+    env:
+      # For incremental builds
+      CARGO_INCREMENTAL: 1
+    steps:
+      - uses: actions/checkout@v6
+        # For incremental builds
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      # For incremental builds
+      - name: git-restore-mtime
+        uses: chetan/git-restore-mtime-action@v2.3
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: coverage
+        run: |
+          cargo install cargo-llvm-cov || true  # when already cached
+          cargo llvm-cov --lcov --output-path coverage.lcov
+
+      # See also: https://github.com/k1LoW/octocov-action
+      - name: Report coverage with octocov
+        uses: k1LoW/octocov-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config: .octocov.yml
