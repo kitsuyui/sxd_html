@@ -169,7 +169,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         _public_id: html5ever::tendril::StrTendril,
         _system_id: html5ever::tendril::StrTendril,
     ) {
-        // ignored, cant seem to find a way to add doctype using sxd_document
+        // sxd_document has no DOCTYPE node type, so DOCTYPE declarations are always silently dropped.
     }
 
     fn get_template_contents(&self, target: &Self::Handle) -> Self::Handle {
@@ -241,14 +241,35 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 }
 
+/// Parses an HTML document and returns the result as a [`Package`].
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html(contents: &str) -> Package {
     parse_html_with_errors(contents).0
 }
 
+/// Parses an HTML fragment and returns the result as a [`Package`].
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html_fragment(contents: &str) -> Package {
     parse_html_fragment_with_errors(contents).0
 }
 
+/// Parses an HTML document and returns the result and any parse errors as a [`Package`].
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     let package = Package::new();
     let document = package.as_document();
@@ -268,6 +289,13 @@ pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     (package, errors)
 }
 
+/// Parses an HTML fragment and returns the result and any parse errors as a [`Package`].
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html_fragment_with_errors(contents: &str) -> (Package, Vec<Error>) {
     let package = Package::new();
     let document = package.as_document();
@@ -335,6 +363,26 @@ mod tests {
         expression
             .evaluate(&context, node.into())
             .map_err(Into::into)
+    }
+
+    #[test]
+    fn test_doctype_is_dropped() {
+        // DOCTYPE declarations are silently dropped: sxd_document has no DOCTYPE node
+        // type and parsing is configured with drop_doctype: true.
+        let (package, errors) =
+            parse_html_with_errors("<!DOCTYPE html><html><head></head><body></body></html>");
+        assert_eq!(errors.len(), 0);
+        let root = package.as_document().root();
+        // Root has exactly one child (the html element); no DOCTYPE node is present.
+        assert_eq!(root.children().len(), 1);
+        assert_eq!(
+            root.children()[0]
+                .element()
+                .expect("first child should be the html element")
+                .name()
+                .local_part(),
+            "html"
+        );
     }
 
     #[test]
