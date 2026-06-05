@@ -8,13 +8,15 @@ use sxd_document::{
 
 use crate::Handle;
 
+const HTML_NAMESPACE: &str = "http://www.w3.org/1999/xhtml";
+
 pub fn qualname_as_qname<'a>(qualname: &'a QualName) -> QName<'a> {
-    // let ns = if qualname.ns.is_empty() {
-    //     None
-    // } else {
-    //     Some(qualname.ns.as_ref())
-    // };
-    QName::with_namespace_uri(None, qualname.local.as_ref())
+    let namespace_uri = match qualname.ns.as_ref() {
+        "" | HTML_NAMESPACE => None,
+        namespace_uri => Some(namespace_uri),
+    };
+
+    QName::with_namespace_uri(namespace_uri, qualname.local.as_ref())
 }
 
 pub fn node_or_text_into_child_of_root(node_or_text: NodeOrText<Handle>) -> ChildOfRoot {

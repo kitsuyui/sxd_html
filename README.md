@@ -123,6 +123,15 @@ will be interpreted as
 So if you run the query `//table/tr/td`, you will not get the `td` hidden by `tbody`.
 You need to run the query `//table/tbody/tr/td`.
 
+HTML elements are stored without the XHTML namespace so existing unprefixed XPath queries such as
+`//article/h1/a` keep working. Embedded SVG and MathML elements keep their HTML5 namespaces. Register
+the namespace prefix on the XPath context before querying those elements:
+
+```rust
+let mut context = Context::new();
+context.set_namespace("svg", "http://www.w3.org/2000/svg");
+```
+
 ## License
 
 Licensed under either of
