@@ -256,6 +256,10 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
 
 /// Parses an HTML document and returns the result as a [`Package`].
 ///
+/// This convenience function discards parse errors. Use
+/// [`parse_html_with_errors`] when callers need to inspect html5ever parse
+/// errors.
+///
 /// # Note
 ///
 /// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
@@ -267,6 +271,10 @@ pub fn parse_html(contents: &str) -> Package {
 
 /// Parses an HTML fragment and returns the result as a [`Package`].
 ///
+/// This convenience function discards parse errors. Use
+/// [`parse_html_fragment_with_errors`] when callers need to inspect html5ever
+/// parse errors.
+///
 /// # Note
 ///
 /// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
@@ -276,7 +284,7 @@ pub fn parse_html_fragment(contents: &str) -> Package {
     parse_html_fragment_with_errors(contents).0
 }
 
-/// Parses an HTML document and returns the result and any parse errors as a [`Package`].
+/// Parses an HTML document and returns the result and any html5ever parse errors as a [`Package`].
 ///
 /// # Note
 ///
@@ -302,7 +310,7 @@ pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     (package, errors)
 }
 
-/// Parses an HTML fragment and returns the result and any parse errors as a [`Package`].
+/// Parses an HTML fragment and returns the result and any html5ever parse errors as a [`Package`].
 ///
 /// # Note
 ///

@@ -43,4 +43,16 @@ mod tests {
 
         assert_eq!("bye", c2.text());
     }
+
+    #[test]
+    fn parse_errors_are_inspectable() {
+        let contents = "<!DOCTYPE html>\n<html><body><p></div></body></html>";
+        let (_package, errors) = sxd_html::parse_html_with_errors(contents);
+
+        let error = errors
+            .first()
+            .expect("mismatched tags should produce a parse error");
+        assert!(error.line() > 0);
+        assert!(!error.message().is_empty());
+    }
 }
