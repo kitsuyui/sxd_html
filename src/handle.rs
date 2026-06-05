@@ -60,11 +60,11 @@ impl<'d> TryFrom<Handle<'d>> for ChildOfRoot<'d> {
     type Error = ();
     fn try_from(h: Handle<'d>) -> Result<Self, Self::Error> {
         match h {
-            Handle::Document(_) => panic!("Handle::Document cannot be made into ChildOfRoot"),
+            Handle::Document(_) => Err(()),
             Handle::Element(x, _, _) => Ok(x.into()),
             Handle::Comment(x) => Ok(x.into()),
             Handle::ProcessingInstruction(x) => Ok(x.into()),
-            Handle::Text(_) => panic!("Handle::Text cannot be made into ChildOfRoot"),
+            Handle::Text(_) => Err(()),
         }
     }
 }
