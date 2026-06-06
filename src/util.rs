@@ -8,14 +8,6 @@ use sxd_document::{
 
 use crate::Handle;
 
-pub fn qualname_from_qname(qname: QName) -> QualName {
-    QualName::new(
-        None,
-        qname.namespace_uri().unwrap_or_default().into(),
-        qname.local_part().into(),
-    )
-}
-
 pub fn qualname_as_qname<'a>(qualname: &'a QualName) -> QName<'a> {
     // let ns = if qualname.ns.is_empty() {
     //     None
