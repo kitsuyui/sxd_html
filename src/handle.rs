@@ -18,6 +18,19 @@ pub enum Handle<'d> {
 }
 
 impl<'d> Handle<'d> {
+    /// Returns `true` if this handle is a template `Element` (html5ever
+    /// `ElementFlags::template == true`).  Call this before
+    /// `get_template_contents` to avoid a panic.
+    pub(crate) fn is_template(&self) -> bool {
+        matches!(self, Self::Element(_, _, true))
+    }
+
+    /// Returns a reference to the inner `Element`.
+    ///
+    /// # Panics
+    /// Panics if `self` is not `Handle::Element`.  html5ever only calls this
+    /// on element nodes (invariant documented in `TreeSink::elem_name`).
+    #[track_caller]
     pub fn element_ref(&self) -> &Element<'d> {
         match self {
             Self::Element(e, _, _) => e,
@@ -25,6 +38,12 @@ impl<'d> Handle<'d> {
         }
     }
 
+    /// Returns the parent of this node.
+    ///
+    /// # Panics
+    /// Panics if `self` is `Handle::Document` — the document root has no
+    /// parent.  html5ever never calls `parent()` on the document handle.
+    #[track_caller]
     pub fn parent(&self) -> Option<ParentOfChild<'d>> {
         match self {
             Self::Document(_) => panic!("Cannot call parent on Document"),
@@ -35,6 +54,11 @@ impl<'d> Handle<'d> {
         }
     }
 
+    /// Returns the siblings that follow this node in document order.
+    ///
+    /// # Panics
+    /// Panics if `self` is `Handle::Document`.
+    #[track_caller]
     pub fn following_siblings(&self) -> Vec<ChildOfElement<'d>> {
         match self {
             Self::Document(_) => panic!("Cannot call following_siblings on Document"),
@@ -45,6 +69,11 @@ impl<'d> Handle<'d> {
         }
     }
 
+    /// Detaches this node from its parent.
+    ///
+    /// # Panics
+    /// Panics if `self` is `Handle::Document`.
+    #[track_caller]
     pub fn remove_from_parent(&self) {
         match self {
             Self::Document(_) => panic!("Cannot call remove_from_parent on Document"),
