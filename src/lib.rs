@@ -24,6 +24,14 @@ use sxd_document::{
     Package,
 };
 
+/// Maximum number of parse errors recorded per parse call.
+///
+/// html5ever fires a callback for every parse error it encounters, so highly
+/// malformed input can accumulate hundreds of thousands of errors. This cap
+/// limits memory growth to a fixed bound while preserving enough errors for
+/// diagnostic purposes.
+pub const MAX_PARSE_ERRORS: usize = 256;
+
 #[derive(Debug)]
 struct DocHtmlSink<'d> {
     document: Document<'d>,
@@ -62,8 +70,10 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     fn parse_error(&self, msg: std::borrow::Cow<'static, str>) {
-        let err = Error::new(self.current_line.get(), msg);
-        self.errors.borrow_mut().push(err);
+        let mut errors = self.errors.borrow_mut();
+        if errors.len() < MAX_PARSE_ERRORS {
+            errors.push(Error::new(self.current_line.get(), msg));
+        }
     }
 
     fn get_document(&self) -> Self::Handle {
@@ -284,7 +294,11 @@ pub fn parse_html_fragment(contents: &str) -> Package {
     parse_html_fragment_with_errors(contents).0
 }
 
-/// Parses an HTML document and returns the result and any html5ever parse errors as a [`Package`].
+/// Parses a complete HTML document and returns html5ever parse errors.
+///
+/// At most [`MAX_PARSE_ERRORS`] errors are returned. Highly malformed input
+/// may produce more errors than this limit; excess errors are silently
+/// discarded to bound memory use.
 ///
 /// # Note
 ///
@@ -310,7 +324,11 @@ pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     (package, errors)
 }
 
-/// Parses an HTML fragment and returns the result and any html5ever parse errors as a [`Package`].
+/// Parses an HTML fragment and returns html5ever parse errors.
+///
+/// At most [`MAX_PARSE_ERRORS`] errors are returned. Highly malformed input
+/// may produce more errors than this limit; excess errors are silently
+/// discarded to bound memory use.
 ///
 /// # Note
 ///
@@ -403,6 +421,20 @@ mod tests {
                 .name()
                 .local_part(),
             "html"
+        );
+    }
+
+    #[test]
+    fn test_parse_error_cap() {
+        // Generate more than MAX_PARSE_ERRORS parse errors by embedding null bytes,
+        // which html5ever reports as errors one per occurrence.
+        let malformed: String = "\u{0000}".repeat(MAX_PARSE_ERRORS + 100);
+        let (_, errors) = parse_html_with_errors(&malformed);
+        assert!(
+            errors.len() <= MAX_PARSE_ERRORS,
+            "expected at most {} errors, got {}",
+            MAX_PARSE_ERRORS,
+            errors.len()
         );
     }
 
