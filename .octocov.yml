@@ -2,6 +2,7 @@
 coverage:
   paths:
     - coverage.lcov
+  acceptable: 65%
 codeToTestRatio:
   code:
     - "src/**/*.rs"
