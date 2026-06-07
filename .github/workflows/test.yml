@@ -44,8 +44,4 @@ jobs:
 
       - run: cargo check
 
-      - name: coverage
-        run: |
-          cargo install cargo-llvm-cov || true  # when already cached
-          cargo llvm-cov --lcov --output-path coverage.lcov
-
+      - run: cargo test --all-targets --all-features
