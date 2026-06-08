@@ -5,8 +5,6 @@ use sxd_document::dom::{
     ChildOfElement, ChildOfRoot, Comment, Element, ParentOfChild, ProcessingInstruction, Root, Text,
 };
 
-use crate::util;
-
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum Handle<'d> {
     Document(Root<'d>),
@@ -78,7 +76,12 @@ impl<'d> TryFrom<Handle<'d>> for ChildOfElement<'d> {
 
 impl<'d> From<Element<'d>> for Handle<'d> {
     fn from(e: Element<'d>) -> Self {
-        let qualname = util::qualname_from_qname(e.name());
+        let name = e.name();
+        let qualname = QualName::new(
+            None,
+            name.namespace_uri().unwrap_or_default().into(),
+            name.local_part().into(),
+        );
         Self::Element(e, qualname, false)
     }
 }
