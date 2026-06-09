@@ -1,8 +1,19 @@
 #[derive(Debug)]
 pub struct Error(u64, String);
+
 impl Error {
     pub(crate) fn new(line: u64, msg: impl Into<String>) -> Self {
         Self(line, msg.into())
+    }
+
+    /// Returns the input line where html5ever reported this parse error.
+    pub fn line(&self) -> u64 {
+        self.0
+    }
+
+    /// Returns html5ever's parse error message.
+    pub fn message(&self) -> &str {
+        &self.1
     }
 }
 

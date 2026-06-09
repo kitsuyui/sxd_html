@@ -121,9 +121,22 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     fn append(&self, parent: &Self::Handle, child: NodeOrText<Self::Handle>) {
         match parent {
             Handle::Document(root) => {
-                // text cant be appended to root so no need to concatenate it
-                let child = util::node_or_text_into_child_of_root(child);
-                root.append_child(child);
+                // html5ever's foster parenting mechanism redirects text nodes to the
+                // nearest enclosing element, so AppendText should never reach this branch.
+                // Explicit match makes the invariant visible; unreachable!() fires if
+                // a future html5ever version breaks the assumption.
+                match child {
+                    NodeOrText::AppendNode(_) => {
+                        let child = util::node_or_text_into_child_of_root(child);
+                        root.append_child(child);
+                    }
+                    NodeOrText::AppendText(_) => {
+                        unreachable!(
+                            "AppendText to document root should never occur: \
+                             html5ever's foster parenting redirects text nodes to elements"
+                        )
+                    }
+                }
             }
             Handle::Element(elem, _, _) => {
                 let last = elem.children().into_iter().last();
@@ -169,7 +182,7 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
         _public_id: html5ever::tendril::StrTendril,
         _system_id: html5ever::tendril::StrTendril,
     ) {
-        // ignored, cant seem to find a way to add doctype using sxd_document
+        // sxd_document has no DOCTYPE node type, so DOCTYPE declarations are always silently dropped.
     }
 
     fn get_template_contents(&self, target: &Self::Handle) -> Self::Handle {
@@ -241,14 +254,43 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 }
 
+/// Parses an HTML document and returns the result as a [`Package`].
+///
+/// This convenience function discards parse errors. Use
+/// [`parse_html_with_errors`] when callers need to inspect html5ever parse
+/// errors.
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html(contents: &str) -> Package {
     parse_html_with_errors(contents).0
 }
 
+/// Parses an HTML fragment and returns the result as a [`Package`].
+///
+/// This convenience function discards parse errors. Use
+/// [`parse_html_fragment_with_errors`] when callers need to inspect html5ever
+/// parse errors.
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html_fragment(contents: &str) -> Package {
     parse_html_fragment_with_errors(contents).0
 }
 
+/// Parses an HTML document and returns the result and any html5ever parse errors as a [`Package`].
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     let package = Package::new();
     let document = package.as_document();
@@ -268,6 +310,13 @@ pub fn parse_html_with_errors(contents: &str) -> (Package, Vec<Error>) {
     (package, errors)
 }
 
+/// Parses an HTML fragment and returns the result and any html5ever parse errors as a [`Package`].
+///
+/// # Note
+///
+/// DOCTYPE declarations are silently dropped. `sxd_document` has no DOCTYPE node type,
+/// and parsing is configured with `drop_doctype: true`. A `<!DOCTYPE html>` declaration
+/// in the input will not produce any node in the resulting tree.
 pub fn parse_html_fragment_with_errors(contents: &str) -> (Package, Vec<Error>) {
     let package = Package::new();
     let document = package.as_document();
@@ -335,6 +384,26 @@ mod tests {
         expression
             .evaluate(&context, node.into())
             .map_err(Into::into)
+    }
+
+    #[test]
+    fn test_doctype_is_dropped() {
+        // DOCTYPE declarations are silently dropped: sxd_document has no DOCTYPE node
+        // type and parsing is configured with drop_doctype: true.
+        let (package, errors) =
+            parse_html_with_errors("<!DOCTYPE html><html><head></head><body></body></html>");
+        assert_eq!(errors.len(), 0);
+        let root = package.as_document().root();
+        // Root has exactly one child (the html element); no DOCTYPE node is present.
+        assert_eq!(root.children().len(), 1);
+        assert_eq!(
+            root.children()[0]
+                .element()
+                .expect("first child should be the html element")
+                .name()
+                .local_part(),
+            "html"
+        );
     }
 
     #[test]
