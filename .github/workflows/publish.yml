@@ -31,6 +31,8 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - run: cargo test --all-features
+
       - run: cargo build --release --all-features
 
   publish:
@@ -53,6 +55,8 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - run: cargo test --all-features
 
       - run: cargo build --release --all-features
 
