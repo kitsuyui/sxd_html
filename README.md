@@ -6,6 +6,18 @@
 [![license](https://img.shields.io/crates/l/sxd_html)](https://github.com/kitsuyui/sxd_html#license)
 
 Uses the `html5ever` to parse html and convert it to a `sxd_document::Package` to use with `sxd_xpath`.
+
+`parse_html` and `parse_html_fragment` intentionally return only the parsed
+`sxd_document::Package`. If callers need to inspect html5ever parse errors,
+use `parse_html_with_errors` or `parse_html_fragment_with_errors`:
+
+```rust
+let (package, errors) = sxd_html::parse_html_with_errors(contents);
+for error in &errors {
+    eprintln!("line {}: {}", error.line(), error.message());
+}
+```
+
 ## Example
 ```rust
 use sxd_xpath::{nodeset::Node, Context, Error, Factory, Value};
