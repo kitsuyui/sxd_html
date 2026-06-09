@@ -121,9 +121,22 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     fn append(&self, parent: &Self::Handle, child: NodeOrText<Self::Handle>) {
         match parent {
             Handle::Document(root) => {
-                // text cant be appended to root so no need to concatenate it
-                let child = util::node_or_text_into_child_of_root(child);
-                root.append_child(child);
+                // html5ever's foster parenting mechanism redirects text nodes to the
+                // nearest enclosing element, so AppendText should never reach this branch.
+                // Explicit match makes the invariant visible; unreachable!() fires if
+                // a future html5ever version breaks the assumption.
+                match child {
+                    NodeOrText::AppendNode(_) => {
+                        let child = util::node_or_text_into_child_of_root(child);
+                        root.append_child(child);
+                    }
+                    NodeOrText::AppendText(_) => {
+                        unreachable!(
+                            "AppendText to document root should never occur: \
+                             html5ever's foster parenting redirects text nodes to elements"
+                        )
+                    }
+                }
             }
             Handle::Element(elem, _, _) => {
                 let last = elem.children().into_iter().last();
