@@ -1,0 +1,28 @@
+[advisories]
+# Deny known security vulnerabilities; warn on unmaintained crates.
+# sxd-document and sxd-xpath have no upstream activity since ~2021 and are
+# knowingly used as core dependencies. No RUSTSEC advisories exist for them
+# today. This config will surface any future advisories immediately via CI.
+ignore = []
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "OpenSSL",
+]
+confidence-threshold = 0.8
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
