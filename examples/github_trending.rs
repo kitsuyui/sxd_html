@@ -1,8 +1,8 @@
 use sxd_xpath::{nodeset::Node, Context, Error, Factory, Value};
 
 fn main() -> anyhow::Result<()> {
-    let contents = reqwest::blocking::get("https://github.com/trending")?.text()?;
-    let package = sxd_html::parse_html(&contents);
+    let contents = include_str!("github_trending.html");
+    let package = sxd_html::parse_html(contents);
     let document = package.as_document();
 
     let mut trending_repos: Vec<String> = Default::default();

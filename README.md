@@ -23,8 +23,29 @@ for error in &errors {
 use sxd_xpath::{nodeset::Node, Context, Error, Factory, Value};
 
 fn main() -> anyhow::Result<()> {
-    let contents = reqwest::blocking::get("https://github.com/trending")?.text()?;
-    let package = sxd_html::parse_html(&contents);
+    let contents = r#"
+<!doctype html>
+<html lang="en">
+  <body>
+    <article>
+      <h1>
+        <a href="/rust-lang/rust"><span>rust-lang</span> /rust</a>
+      </h1>
+    </article>
+    <article>
+      <h1>
+        <a href="/tokio-rs/tokio"><span>tokio-rs</span> /tokio</a>
+      </h1>
+    </article>
+    <article>
+      <h1>
+        <a href="/hyperium/hyper"><span>hyperium</span> /hyper</a>
+      </h1>
+    </article>
+  </body>
+</html>
+"#;
+    let package = sxd_html::parse_html(contents);
     let document = package.as_document();
 
     let mut trending_repos: Vec<String> = Default::default();
@@ -48,7 +69,7 @@ fn main() -> anyhow::Result<()> {
 
     println!("Trending Repos :");
     for name in trending_repos {
-        println!("\t{}", name);
+        println!("\t{name}");
     }
 
     Ok(())
@@ -67,34 +88,12 @@ fn evaluate_xpath_node<'d>(node: impl Into<Node<'d>>, expr: &str) -> Result<Valu
 }
 ```
 
-Output (01/07/2021):
+Output:
 ```
 Trending Repos :
-	GTAmodding /re3
-	jina-ai /jina
-	JetBrains /kotlin
-	freefq /free
-	prisma /prisma
-	rcmaehl /WhyNotWin11
-	bytedance /lightseq
-	covidpass-org /covidpass
-	pi-apps /pi-platform-docs
-	yangshun /front-end-interview-handbook
-	amit-davidson /awesome-golang-workshops
-	mhadidg /software-architecture-books
-	30-seconds /30-seconds-of-code
-	GokuMohandas /MadeWithML
-	dataease /dataease
-	ffffffff0x /Digital-Privacy
-	trekhleb /javascript-algorithms
-	PaddlePaddle /PaddleX
-	SigNoz /signoz
-	sudheerj /reactjs-interview-questions
-	EdgeSecurityTeam /Vulnerability
-	dastergon /awesome-sre
-	PowerShell /PowerShell
-	CorentinJ /Real-Time-Voice-Cloning
-	csseky /cskaoyan
+	rust-lang/rust
+	tokio-rs/tokio
+	hyperium/hyper
 ```
 
 ## Note
