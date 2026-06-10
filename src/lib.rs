@@ -196,11 +196,11 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     fn get_template_contents(&self, target: &Self::Handle) -> Self::Handle {
-        // this template stuff is probably not well done but seems to work
-        match target {
-            Handle::Element(_, _, true) => target.clone(),
-            _ => panic!("not a template element"),
-        }
+        assert!(
+            target.is_template(),
+            "get_template_contents called on non-template element"
+        );
+        target.clone()
     }
 
     fn same_node(&self, x: &Self::Handle, y: &Self::Handle) -> bool {
