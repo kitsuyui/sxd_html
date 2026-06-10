@@ -20,7 +20,7 @@ use html5ever::{
     LocalName, Namespace, QualName,
 };
 use sxd_document::{
-    dom::{ChildOfElement, Document},
+    dom::{ChildOfElement, Document, ParentOfChild},
     Package,
 };
 
@@ -204,6 +204,14 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     fn append_before_sibling(&self, sibling: &Self::Handle, new_node: NodeOrText<Self::Handle>) {
         #[allow(clippy::expect_used)]
         let parent = sibling.parent().expect("must have a parent");
+
+        // Validate new_node against the parent type *before* mutating the DOM.
+        // parent_of_child_append_node_or_text panics when the parent is Root and
+        // new_node is AppendText. Panicking after siblings are removed would leave the
+        // tree in a partial state with those siblings permanently lost.
+        if let (ParentOfChild::Root(_), NodeOrText::AppendText(_)) = (&parent, &new_node) {
+            panic!("Text cannot be made into ChildOfRoot");
+        }
 
         let children = {
             #[allow(clippy::expect_used)]
