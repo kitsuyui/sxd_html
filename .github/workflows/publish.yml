@@ -35,6 +35,8 @@ jobs:
 
       - run: cargo build --release --all-features
 
+      - run: scripts/test-check-cargo-version-tag.sh
+
   publish:
     runs-on: ubuntu-latest
     permissions:
@@ -59,6 +61,9 @@ jobs:
       - run: cargo test --all-features
 
       - run: cargo build --release --all-features
+
+      - name: verify release tag matches Cargo.toml version
+        run: scripts/check-cargo-version-tag.sh "${GITHUB_REF_NAME}"
 
       - name: publish (dry-run)
         if: github.event_name == 'release' && github.event.release.prerelease
