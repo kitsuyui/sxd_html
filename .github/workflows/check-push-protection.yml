@@ -1,0 +1,26 @@
+name: Check push protection
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret scanning push protection
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=$(gh api "repos/${{ github.repository }}" \
+            --jq '.security_and_analysis.secret_scanning_push_protection.status // "unknown"')
+          echo "Push protection: $status"
+          if [ "$status" != "enabled" ]; then
+            echo "::error::Secret scanning push protection is not enabled (status: $status)."
+            echo "::error::Enable it at: https://github.com/${{ github.repository }}/settings/security_analysis"
+            exit 1
+          fi
