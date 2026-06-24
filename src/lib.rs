@@ -4,6 +4,7 @@ mod util;
 
 use std::{
     cell::{Cell, RefCell},
+    collections::HashMap,
     convert::TryFrom,
 };
 
@@ -20,7 +21,7 @@ use html5ever::{
     LocalName, Namespace, QualName,
 };
 use sxd_document::{
-    dom::{ChildOfElement, Document, ParentOfChild},
+    dom::{ChildOfElement, Document, Element, ParentOfChild},
     Package,
 };
 
@@ -38,6 +39,7 @@ struct DocHtmlSink<'d> {
     document_handle: Handle<'d>,
     errors: RefCell<Vec<Error>>,
     current_line: Cell<u64>,
+    last_children: RefCell<HashMap<Element<'d>, Option<ChildOfElement<'d>>>>,
 }
 
 impl<'d> DocHtmlSink<'d> {
@@ -49,6 +51,36 @@ impl<'d> DocHtmlSink<'d> {
             document_handle,
             errors: Default::default(),
             current_line: Cell::new(0),
+            last_children: Default::default(),
+        }
+    }
+
+    fn cached_last_child(&self, elem: Element<'d>) -> Option<ChildOfElement<'d>> {
+        let mut last_children = self.last_children.borrow_mut();
+        if let Some(last_child) = last_children.get(&elem) {
+            return *last_child;
+        }
+
+        let last_child = elem.children().into_iter().last();
+        last_children.insert(elem, last_child);
+        last_child
+    }
+
+    fn set_cached_last_child(&self, elem: Element<'d>, last_child: Option<ChildOfElement<'d>>) {
+        self.last_children.borrow_mut().insert(elem, last_child);
+    }
+
+    fn invalidate_cached_last_child(&self, elem: Element<'d>) {
+        self.last_children.borrow_mut().remove(&elem);
+    }
+
+    fn invalidate_parent_last_child(&self, target: &Handle<'d>) {
+        if matches!(target, Handle::Document(_)) {
+            return;
+        }
+
+        if let Some(ParentOfChild::Element(parent)) = target.parent() {
+            self.invalidate_cached_last_child(parent);
         }
     }
 }
@@ -136,8 +168,10 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
                 // Explicit match makes the invariant visible; unreachable!() fires if
                 // a future html5ever version breaks the assumption.
                 match child {
-                    NodeOrText::AppendNode(_) => {
-                        let child = util::node_or_text_into_child_of_root(child);
+                    NodeOrText::AppendNode(handle) => {
+                        self.invalidate_parent_last_child(&handle);
+                        let child =
+                            util::node_or_text_into_child_of_root(NodeOrText::AppendNode(handle));
                         root.append_child(child);
                     }
                     NodeOrText::AppendText(_) => {
@@ -149,7 +183,8 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
                 }
             }
             Handle::Element(elem, _, _) => {
-                let last = elem.children().into_iter().last();
+                let elem = *elem;
+                let last = self.cached_last_child(elem);
 
                 match (last, child) {
                     (Some(ChildOfElement::Text(x)), NodeOrText::AppendText(y)) => {
@@ -158,9 +193,14 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
                         x.set_text(&new_text);
                     }
                     (_, child) => {
+                        if let NodeOrText::AppendNode(ref handle) = child {
+                            self.invalidate_parent_last_child(handle);
+                        }
+
                         let document = elem.document();
                         let child = util::node_or_text_into_child_of_element(&document, child);
                         elem.append_child(child);
+                        self.set_cached_last_child(elem, Some(child));
                     }
                 }
             }
@@ -234,7 +274,15 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
             util::child_of_element_remove_from_parent(child);
         }
 
+        if let NodeOrText::AppendNode(ref handle) = new_node {
+            self.invalidate_parent_last_child(handle);
+        }
+
         util::parent_of_child_append_node_or_text(&parent, new_node);
+        if let ParentOfChild::Element(parent) = parent {
+            self.invalidate_cached_last_child(parent);
+        }
+
         let parent_handle = Handle::from(parent);
         for child in children {
             let node_or_text = match child {
@@ -259,16 +307,22 @@ impl<'d> TreeSink for DocHtmlSink<'d> {
     }
 
     fn remove_from_parent(&self, target: &Self::Handle) {
+        self.invalidate_parent_last_child(target);
         target.remove_from_parent();
     }
 
     fn reparent_children(&self, node: &Self::Handle, new_parent: &Self::Handle) {
-        let node = node.element_ref();
-        let new_parent = new_parent.element_ref();
+        let node = *node.element_ref();
+        let new_parent = *new_parent.element_ref();
 
         let children = node.children();
+        let new_parent_last_child = children.last().copied();
         node.clear_children();
+        self.set_cached_last_child(node, None);
         new_parent.append_children(children);
+        if let Some(last_child) = new_parent_last_child {
+            self.set_cached_last_child(new_parent, Some(last_child));
+        }
     }
 }
 
@@ -461,6 +515,24 @@ mod tests {
         assert_eq!(result, "Hello World");
         let result = get_html_result(html, "/html/head/title/text()").unwrap();
         assert_eq!(result, "Test");
+    }
+
+    #[test]
+    fn test_flat_sibling_text_append_pattern() {
+        // Exercises flat element/text siblings, where each trailing text append
+        // used to rescan all existing children of the parent element.
+        let mut html = String::from("<!DOCTYPE html><html><body>");
+        for i in 0..512 {
+            html.push_str("<span>");
+            html.push_str(&i.to_string());
+            html.push_str("</span>\n");
+        }
+        html.push_str("</body></html>");
+
+        let result = get_html_result(&html, "count(/html/body/span)").unwrap();
+        assert_eq!(result, "512");
+        let result = get_html_result(&html, "/html/body/span[512]/text()").unwrap();
+        assert_eq!(result, "511");
     }
 
     #[test]
