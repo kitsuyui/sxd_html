@@ -1,8 +1,26 @@
 #[cfg(test)]
 mod tests {
+    use sxd_document::dom::{ChildOfElement, Element};
     use sxd_xpath::{Context, Factory, Value};
 
     const SVG_NAMESPACE: &str = "http://www.w3.org/2000/svg";
+
+    fn child_kinds(element: Element<'_>) -> Vec<String> {
+        element
+            .children()
+            .iter()
+            .map(|child| match child {
+                ChildOfElement::Element(element) => {
+                    format!("element:{}", element.name().local_part())
+                }
+                ChildOfElement::Text(text) => format!("text:{}", text.text()),
+                ChildOfElement::Comment(comment) => format!("comment:{}", comment.text()),
+                ChildOfElement::ProcessingInstruction(pi) => {
+                    format!("pi:{}", pi.target())
+                }
+            })
+            .collect()
+    }
 
     #[test]
     fn parse_simple() {
@@ -87,5 +105,57 @@ mod tests {
             .expect("mismatched tags should produce a parse error");
         assert!(error.line() > 0);
         assert!(!error.message().is_empty());
+    }
+
+    #[test]
+    fn preserves_foster_parented_siblings_around_table() {
+        let contents = concat!(
+            "<!DOCTYPE html><html><body><div>",
+            "<!--before--><table><tr><td>cell</td></tr>alpha<span>tail</span></table>",
+            "<p>after</p>",
+            "</div></body></html>",
+        );
+        let (package, errors) = sxd_html::parse_html_with_errors(contents);
+        assert!(
+            !errors.is_empty(),
+            "malformed table content should still be observable through parse_html"
+        );
+
+        let root = package.as_document().root();
+        let html = root.children()[0]
+            .element()
+            .expect("html should be root element");
+        let body = html.children()[1]
+            .element()
+            .expect("body should be inserted");
+        let div = body.children()[0]
+            .element()
+            .expect("div should be preserved");
+
+        assert_eq!(
+            vec![
+                "comment:before".to_string(),
+                "text:alpha".to_string(),
+                "element:span".to_string(),
+                "element:table".to_string(),
+                "element:p".to_string(),
+            ],
+            child_kinds(div),
+        );
+
+        let table = div.children()[3]
+            .element()
+            .expect("table should remain after foster-parented siblings");
+        assert_eq!(vec!["element:tbody".to_string()], child_kinds(table));
+
+        let tbody = table.children()[0]
+            .element()
+            .expect("tbody should be inserted by html5ever");
+        assert_eq!(vec!["element:tr".to_string()], child_kinds(tbody));
+
+        let paragraph = div.children()[4]
+            .element()
+            .expect("paragraph after the table should remain last");
+        assert_eq!("after", paragraph.children()[0].text().unwrap().text());
     }
 }
